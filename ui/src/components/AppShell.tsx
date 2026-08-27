@@ -48,7 +48,7 @@ export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) 
         </div>
         <dl className="company-context" aria-label="Current research context">
           <div><dt>Selected company</dt><dd>{data.company.name}<span>{data.company.ticker} · CIK {data.company.cik}</span></dd></div>
-          <div><dt>Coverage</dt><dd>{data.facts.length} facts<span>{data.filings.length} filings · {data.analytics.forensicTests} tests</span></dd></div>
+          <div><dt>Coverage</dt><dd>{data.factCount} facts<span>{data.filingCount} filings · {data.analytics.forensicTests} tests</span></dd></div>
           <div><dt>Workspace state</dt><dd><span className={`status-dot status-dot--${status === "ready" ? "success" : "warning"}`} />{status === "preparing" ? "Preparing" : status === "loading" ? "Loading" : status === "error" ? "Attention" : "Ready"}<span>{statusMessage}</span></dd></div>
         </dl>
       </header>

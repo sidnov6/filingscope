@@ -45,7 +45,7 @@ export function WorkspaceProvider({ children }: Readonly<{ children: React.React
       const next = await fetchWorkspace(company.cik);
       setData(next);
       setStatus("ready");
-      setStatusMessage(`Prepared ${next.company.name}: ${next.facts.length} normalized facts and ${next.analytics.forensicTests} tests.`);
+      setStatusMessage(`Prepared ${next.company.name}: ${next.factCount} normalized facts and ${next.analytics.forensicTests} tests.`);
       const url = new URL(window.location.href);
       url.searchParams.set("company", company.cik);
       window.history.replaceState({}, "", url);

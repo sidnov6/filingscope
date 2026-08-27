@@ -7,8 +7,8 @@ import { useWorkspace } from "@/src/components/WorkspaceProvider";
 export default function AuditPage() {
   const { data } = useWorkspace();
   const stages = [
-    ["Acquisition", data.filings.length ? "Complete" : "Empty", `${data.filings.length} filing records · immutable raw cache`],
-    ["Normalization", data.facts.length ? "Complete" : "Empty", `${data.facts.length} facts · mapping ${data.quality.mappingVersion}`],
+    ["Acquisition", data.filingCount ? "Complete" : "Empty", `${data.filingCount} filing records · immutable raw cache`],
+    ["Normalization", data.factCount ? "Complete" : "Empty", `${data.factCount} facts · mapping ${data.quality.mappingVersion}`],
     ["Analytics", "Complete", `${data.analytics.forensicTests} versioned tests · ${data.analytics.computableTests} computable`],
     ["Evidence", data.evidence.length ? "Available" : "Pending", `${data.evidence.length} citation-ready packets`],
     ["Investigation", data.signals.length ? "Eligible" : "Deterministic only", `${data.signals.length} qualifying ranked signals`],

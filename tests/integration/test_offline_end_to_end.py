@@ -112,6 +112,9 @@ def test_raw_fixture_to_api_and_deterministic_report(
     financials = api.get(f"/companies/{ingestion.company.cik}/financials")
     assert financials.status_code == 200
     assert len(financials.json()["facts"]) == 5
+    assert financials.json()["normalized_fact_count"] == 6
+    assert financials.json()["filing_count"] == 4
+    assert financials.json()["finding_count"] == len(analysis.findings)
     signals = api.get(f"/companies/{ingestion.company.cik}/signals")
     assert signals.status_code == 200
     assert signals.json()["metric_count"] == 10

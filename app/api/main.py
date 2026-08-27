@@ -30,7 +30,6 @@ from filingscope.reports import ReportRenderer
 from filingscope.schemas import (
     SCHEMA_VERSION,
     CompanyIdentity,
-    DataQualityFinding,
     DataQualityScore,
     EvidencePacket,
     FilingMetadata,
@@ -105,8 +104,11 @@ class CompanySearchResponse(ApiModel):
 class FinancialsResponse(ApiModel):
     company: CompanyIdentity
     facts: tuple[NormalizedFinancialFact, ...]
-    findings: tuple[DataQualityFinding, ...]
+    normalized_fact_count: int
+    finding_count: int
+    missing_metric_count: int
     filings: tuple[FilingMetadata, ...]
+    filing_count: int
     available_bases: tuple[PeriodBasis, ...]
     quality_score: DataQualityScore
 
@@ -331,22 +333,36 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         basis: Annotated[list[PeriodBasis] | None, Query()] = None,
         start_date: date | None = None,
         end_date: date | None = None,
+        periods_per_metric: Annotated[int, Query(ge=1, le=40)] = 12,
     ) -> FinancialsResponse:
         normalized = normalize_cik(cik)
         company = store.company(normalized)
         if company is None:
             raise HTTPException(status_code=404, detail="Company is not available locally")
         facts = store.normalized_facts(normalized)
+        findings = store.data_quality_findings(normalized)
+        filings = store.filings(normalized)
         requested_bases = frozenset(basis) if basis else PeriodFilter().bases
         selected = select_periods(
             facts,
             PeriodFilter(bases=requested_bases, start_date=start_date, end_date=end_date),
         )
+        recent_by_metric: dict[str, list[NormalizedFinancialFact]] = {}
+        for fact in selected:
+            recent_by_metric.setdefault(fact.canonical_metric, []).append(fact)
+        selected = [
+            fact
+            for metric in sorted(recent_by_metric)
+            for fact in recent_by_metric[metric][-periods_per_metric:]
+        ]
         return FinancialsResponse(
             company=company,
             facts=tuple(selected),
-            findings=tuple(store.data_quality_findings(normalized)),
-            filings=tuple(store.filings(normalized)),
+            normalized_fact_count=len(facts),
+            finding_count=len(findings),
+            missing_metric_count=sum(finding.category == "missing_metric" for finding in findings),
+            filings=tuple(filings[:50]),
+            filing_count=len(filings),
             available_bases=tuple(
                 sorted(
                     {
@@ -360,7 +376,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             quality_score=score_data_quality(
                 normalized,
                 facts,
-                store.data_quality_findings(normalized),
+                findings,
             ),
         )
 
