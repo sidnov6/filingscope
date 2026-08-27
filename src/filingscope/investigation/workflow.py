@@ -33,7 +33,7 @@ from filingscope.schemas import (
     VerificationStatus,
 )
 
-PROMPT_VERSION = "1.3.0"
+PROMPT_VERSION = "1.4.0"
 ModelT = TypeVar("ModelT", bound=BaseModel)
 AgentRole = Literal["planner", "investigator", "bull", "skeptical", "verifier", "judge"]
 EventRole = Literal["system", "planner", "investigator", "bull", "skeptical", "verifier", "judge"]
@@ -144,41 +144,55 @@ class InvestigationWorkflow:
                 deadline,
             )
             common = self._case_payload(inputs, signals, evidence, plan)
-            investigator = self._complete(
-                "investigator",
-                {
-                    **common,
-                    "mandate": (
-                        "Return one to three claims that collectively address every signal. "
-                        "Reference only supplied metric or evidence IDs and identify evidence gaps."
-                    ),
-                },
-                AgentCase,
-                deadline,
+            investigator = self._normalize_case_references(
+                self._complete(
+                    "investigator",
+                    {
+                        **common,
+                        "mandate": (
+                            "Return one to three claims that collectively address every signal. "
+                            "Reference only supplied metric or evidence IDs and identify evidence "
+                            "gaps."
+                        ),
+                    },
+                    AgentCase,
+                    deadline,
+                ),
+                inputs,
+                signals,
             )
-            bull_case = self._complete(
-                "bull",
-                {
-                    **common,
-                    "mandate": (
-                        "Return one to three supported claims forming the strongest legitimate "
-                        "benign explanation. Reference only supplied metric or evidence IDs."
-                    ),
-                },
-                AgentCase,
-                deadline,
+            bull_case = self._normalize_case_references(
+                self._complete(
+                    "bull",
+                    {
+                        **common,
+                        "mandate": (
+                            "Return one to three supported claims forming the strongest legitimate "
+                            "benign explanation. Reference only supplied metric or evidence IDs."
+                        ),
+                    },
+                    AgentCase,
+                    deadline,
+                ),
+                inputs,
+                signals,
             )
-            skeptical_case = self._complete(
-                "skeptical",
-                {
-                    **common,
-                    "mandate": (
-                        "Return one to three supported claims testing whether reporting quality "
-                        "is weaker than it appears. Reference only supplied metric or evidence IDs."
-                    ),
-                },
-                AgentCase,
-                deadline,
+            skeptical_case = self._normalize_case_references(
+                self._complete(
+                    "skeptical",
+                    {
+                        **common,
+                        "mandate": (
+                            "Return one to three supported claims testing whether "
+                            "reporting quality is weaker than it appears. Reference only "
+                            "supplied metric or evidence IDs."
+                        ),
+                    },
+                    AgentCase,
+                    deadline,
+                ),
+                inputs,
+                signals,
             )
             for case, role in (
                 (investigator, "investigator"),
@@ -375,19 +389,11 @@ class InvestigationWorkflow:
         plan: BaseModel,
     ) -> dict[str, object]:
         metrics = InvestigationWorkflow._relevant_metrics(inputs, signals)
-        fact_ids = sorted({fact_id for metric in metrics for fact_id in metric.input_fact_ids})
         return {
             "company": inputs.company.model_dump(mode="json"),
             "plan": plan.model_dump(mode="json"),
             "signals": [signal.model_dump(mode="json") for signal in signals],
             "metrics": [metric.model_dump(mode="json") for metric in metrics],
-            "reference_policy": {
-                "allowed_signal_ids": [signal.signal_id for signal in signals],
-                "allowed_evidence_ids": [packet.evidence_id for packet in evidence],
-                "allowed_fact_ids": fact_ids,
-                "allowed_metric_result_ids": [metric.metric_result_id for metric in metrics],
-                "rule": "Copy IDs only into the matching field; use [] when none apply.",
-            },
             "evidence": [
                 {
                     "evidence_id": packet.evidence_id,
@@ -399,6 +405,32 @@ class InvestigationWorkflow:
                 for packet in evidence
             ],
         }
+
+    @staticmethod
+    def _normalize_case_references(
+        case: AgentCase,
+        inputs: InvestigationInputs,
+        signals: Sequence[Signal],
+    ) -> AgentCase:
+        """Remove only metric IDs mistakenly duplicated into a claim's fact field."""
+        allowed_facts = {fact.normalized_fact_id for fact in inputs.normalized_facts}
+        allowed_metrics = {
+            metric.metric_result_id
+            for metric in InvestigationWorkflow._relevant_metrics(inputs, signals)
+        }
+        claims = []
+        for claim in case.claims:
+            invalid_facts = set(claim.fact_ids) - allowed_facts
+            if invalid_facts and invalid_facts.issubset(allowed_metrics):
+                claim = claim.model_copy(
+                    update={
+                        "fact_ids": tuple(
+                            fact_id for fact_id in claim.fact_ids if fact_id in allowed_facts
+                        )
+                    }
+                )
+            claims.append(claim)
+        return case.model_copy(update={"claims": tuple(claims)})
 
     @staticmethod
     def _validate_case(

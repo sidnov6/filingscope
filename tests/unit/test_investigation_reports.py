@@ -257,6 +257,35 @@ def test_invalid_agent_reference_fails_closed_without_judgment() -> None:
     assert report.run.stop_reason == "Agent workflow stopped safely: claim_evidence_invalid."
 
 
+def test_metric_id_duplicated_as_fact_reference_is_removed() -> None:
+    inputs = _inputs()
+    case = AgentCase(
+        role="skeptical",
+        claims=(
+            InvestigationClaim(
+                claim_id="claim-skeptical-001",
+                role="skeptical",
+                text="The metric warrants review within the supplied screening context.",
+                signal_ids=("signal-fixture-001",),
+                fact_ids=("metric-result-001",),
+                metric_result_ids=("metric-result-001",),
+                confidence=Decimal("0.5"),
+            ),
+        ),
+        evidence_gaps=("The filing excerpt is incomplete.",),
+        falsifiers=(),
+    )
+
+    normalized = InvestigationWorkflow._normalize_case_references(
+        case,
+        inputs,
+        inputs.signals,
+    )
+
+    assert normalized.claims[0].fact_ids == ()
+    assert normalized.claims[0].metric_result_ids == ("metric-result-001",)
+
+
 def test_provider_unavailable_and_no_signal_degrade_honestly() -> None:
     unavailable = InvestigationWorkflow().run(_inputs())
     no_signal = InvestigationWorkflow(provider=FixtureProvider()).run(_inputs(with_signal=False))
