@@ -547,7 +547,8 @@ class ParquetDuckDbStore:
                 escaped_glob = glob.replace("'", "''")
                 connection.execute(
                     f"CREATE OR REPLACE VIEW {dataset} AS "
-                    f"SELECT * FROM read_parquet('{escaped_glob}', hive_partitioning = true)"
+                    f"SELECT * FROM read_parquet("
+                    f"'{escaped_glob}', hive_partitioning = true, union_by_name = true)"
                 )
                 connection.execute(
                     "INSERT OR REPLACE INTO schema_versions VALUES (?, ?)",
