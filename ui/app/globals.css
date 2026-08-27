@@ -210,7 +210,19 @@ tbody tr:last-child td { border-bottom: 0; }
 .map-toolbar button[aria-pressed="true"] { color: white; background: #123654; }
 .map-toolbar span { color: var(--fs-text-secondary); font-size: 12px; }
 .map-layout { display: grid; grid-template-columns: minmax(0, 2fr) minmax(300px, .75fr); min-height: 560px; margin-bottom: var(--fs-space-4); }
-.world-map { min-height: 560px; border: 1px solid var(--fs-border); }
+.world-map { position: relative; display: grid; min-height: 560px; overflow: hidden; background: #dcecf1; border: 1px solid var(--fs-border); place-items: center; }
+.world-map svg { display: block; width: 100%; height: 100%; min-height: 520px; }
+.map-ocean { fill: #dcecf1; stroke: #8ba2aa; stroke-width: 1; }
+.map-country { fill: #f3efe4; stroke: #708991; stroke-width: .65; vector-effect: non-scaling-stroke; }
+.map-graticule { fill: none; stroke: #aac1c8; stroke-width: .55; stroke-opacity: .75; vector-effect: non-scaling-stroke; }
+.map-svg-marker { cursor: pointer; outline: none; }
+.map-svg-marker:focus .map-marker-ring { stroke: #123654; stroke-width: 4; }
+.map-marker-ring { fill: white; stroke: #075f5a; stroke-width: 3; }
+.map-marker-core { fill: var(--fs-accent); }
+.map-zoom-controls { position: absolute; z-index: 2; top: 12px; right: 12px; display: grid; box-shadow: 0 1px 5px rgba(18, 54, 84, .22); }
+.map-zoom-controls button { width: 36px; height: 36px; color: var(--fs-text-primary); background: white; border: 1px solid var(--fs-border-strong); font-size: 22px; line-height: 1; }
+.map-zoom-controls button + button { border-top: 0; }
+.map-zoom-controls button:disabled { color: var(--fs-text-secondary); background: #eef2f4; }
 .map-evidence { padding: var(--fs-space-5); background: white; border: 1px solid var(--fs-border); border-left: 0; }
 .map-evidence h2 { margin: 4px 0 12px; font-size: 20px; }
 .registered-address { color: var(--fs-text-secondary); }
@@ -219,9 +231,6 @@ tbody tr:last-child td { border-bottom: 0; }
 .map-evidence dt { color: var(--fs-text-secondary); font-size: 11px; text-transform: uppercase; }
 .map-evidence dd { margin: 2px 0 0; }
 .map-limitation { padding: 12px; color: #6f5100; background: #fff8e6; border-left: 3px solid var(--fs-warning); }
-.map-marker { width: 20px; height: 20px; background: var(--fs-accent); border: 3px solid white; border-radius: 50%; box-shadow: 0 0 0 2px #075f5a; cursor: pointer; }
-.maplibregl-popup-content { color: var(--fs-text-primary); font: 12px "Open Sans", Arial, sans-serif; }
-.maplibregl-popup-content p { margin: 4px 0; }
 
 @media (max-width: 1050px) {
   .topbar { grid-template-columns: auto 1fr; }

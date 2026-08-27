@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import "@salt-ds/theme/index.css";
-import "maplibre-gl/dist/maplibre-gl.css";
 import "./globals.css";
 import { AppProviders } from "./providers";
 
