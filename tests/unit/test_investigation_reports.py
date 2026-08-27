@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from datetime import UTC, date, datetime
 from decimal import Decimal
 from pathlib import Path
@@ -307,12 +308,20 @@ def test_workflow_wall_clock_budget_fails_closed_before_provider_call() -> None:
 
 def test_groq_adapter_retries_then_validates_structured_output() -> None:
     calls = 0
+    requests: list[dict[str, object]] = []
+    sleeps: list[float] = []
 
     def handler(request: httpx.Request) -> httpx.Response:
         nonlocal calls
         calls += 1
+        request.read()
+        requests.append(json.loads(request.content))
         if calls == 1:
-            return httpx.Response(503, request=request)
+            return httpx.Response(
+                429,
+                request=request,
+                headers={"x-ratelimit-reset-tokens": "1.25s"},
+            )
         content = InvestigationPlan(
             plan_id="plan-fixture-001",
             signal_ids=("signal-fixture-001",),
@@ -332,13 +341,24 @@ def test_groq_adapter_retries_then_validates_structured_output() -> None:
             model_name="fixture-model",
             http_client=client,
             max_retries=1,
+            sleep=sleeps.append,
         )
         result = provider.complete(
             role="planner",
             payload={"signals": ["signal-fixture-001"]},
             output_model=InvestigationPlan,
-            budget=RoleBudget(max_input_tokens=100, max_output_tokens=100),
+            budget=RoleBudget(max_input_tokens=1_000, max_output_tokens=100),
         )
 
     assert result.plan_id == "plan-fixture-001"
     assert calls == 2
+    assert sleeps == [1.75]
+    assert requests[-1]["reasoning_effort"] == "low"
+    assert requests[-1]["reasoning_format"] == "hidden"
+    assert requests[-1]["max_completion_tokens"] == 100
+    response_format = requests[-1]["response_format"]
+    assert isinstance(response_format, dict)
+    assert response_format["type"] == "json_schema"
+    json_schema = response_format["json_schema"]
+    assert isinstance(json_schema, dict)
+    assert json_schema["strict"] is True

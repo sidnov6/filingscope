@@ -408,7 +408,7 @@ class InvestigationClaim(FrozenModel):
 class AgentCase(FrozenModel):
     schema_version: str = SCHEMA_VERSION
     role: Literal["investigator", "bull", "skeptical"]
-    claims: tuple[InvestigationClaim, ...]
+    claims: tuple[InvestigationClaim, ...] = Field(min_length=1, max_length=3)
     evidence_gaps: tuple[str, ...] = ()
     falsifiers: tuple[str, ...] = ()
 

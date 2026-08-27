@@ -33,7 +33,7 @@ from filingscope.schemas import (
     VerificationStatus,
 )
 
-PROMPT_VERSION = "1.0.0"
+PROMPT_VERSION = "1.1.0"
 ModelT = TypeVar("ModelT", bound=BaseModel)
 AgentRole = Literal["planner", "investigator", "bull", "skeptical", "verifier", "judge"]
 EventRole = Literal["system", "planner", "investigator", "bull", "skeptical", "verifier", "judge"]
@@ -146,19 +146,37 @@ class InvestigationWorkflow:
             common = self._case_payload(inputs, signals, evidence, plan)
             investigator = self._complete(
                 "investigator",
-                {**common, "mandate": "Explain each signal and identify evidence gaps."},
+                {
+                    **common,
+                    "mandate": (
+                        "Return one to three claims that collectively address every signal. "
+                        "Reference only supplied metric or evidence IDs and identify evidence gaps."
+                    ),
+                },
                 AgentCase,
                 deadline,
             )
             bull_case = self._complete(
                 "bull",
-                {**common, "mandate": "Construct the strongest legitimate benign explanation."},
+                {
+                    **common,
+                    "mandate": (
+                        "Return one to three supported claims forming the strongest legitimate "
+                        "benign explanation. Reference only supplied metric or evidence IDs."
+                    ),
+                },
                 AgentCase,
                 deadline,
             )
             skeptical_case = self._complete(
                 "skeptical",
-                {**common, "mandate": "Test whether reporting quality is weaker than it appears."},
+                {
+                    **common,
+                    "mandate": (
+                        "Return one to three supported claims testing whether reporting quality "
+                        "is weaker than it appears. Reference only supplied metric or evidence IDs."
+                    ),
+                },
                 AgentCase,
                 deadline,
             )
@@ -169,6 +187,12 @@ class InvestigationWorkflow:
             ):
                 self._validate_case(case, role, inputs, signals, evidence)
             claims = (*investigator.claims, *bull_case.claims, *skeptical_case.claims)
+            covered_signal_ids = {signal_id for claim in claims for signal_id in claim.signal_ids}
+            if not {signal.signal_id for signal in signals}.issubset(covered_signal_ids):
+                raise InvestigationError(
+                    "Competing cases did not collectively address every ranked signal",
+                    "agent_signal_coverage_failed",
+                )
             verification_batch = self._complete(
                 "verifier",
                 {
@@ -350,11 +374,12 @@ class InvestigationWorkflow:
         evidence: Sequence[EvidencePacket],
         plan: BaseModel,
     ) -> dict[str, object]:
+        metrics = InvestigationWorkflow._relevant_metrics(inputs, signals)
         return {
             "company": inputs.company.model_dump(mode="json"),
             "plan": plan.model_dump(mode="json"),
             "signals": [signal.model_dump(mode="json") for signal in signals],
-            "metrics": [metric.model_dump(mode="json") for metric in inputs.metrics],
+            "metrics": [metric.model_dump(mode="json") for metric in metrics],
             "evidence": [
                 {
                     "evidence_id": packet.evidence_id,
@@ -382,14 +407,17 @@ class InvestigationWorkflow:
             )
         signal_ids = {signal.signal_id for signal in signals}
         covered = {signal_id for claim in case.claims for signal_id in claim.signal_ids}
-        if not signal_ids.issubset(covered):
+        if not covered:
             raise InvestigationError(
-                message=f"{role} did not address every ranked signal",
+                message=f"{role} did not address any ranked signal",
                 code="agent_signal_coverage_failed",
             )
         allowed_evidence = {packet.evidence_id for packet in evidence}
         allowed_facts = {fact.normalized_fact_id for fact in inputs.normalized_facts}
-        allowed_metrics = {metric.metric_result_id for metric in inputs.metrics}
+        allowed_metrics = {
+            metric.metric_result_id
+            for metric in InvestigationWorkflow._relevant_metrics(inputs, signals)
+        }
         for claim in case.claims:
             if not set(claim.signal_ids).issubset(signal_ids):
                 raise InvestigationError(
@@ -405,6 +433,21 @@ class InvestigationWorkflow:
                 raise InvestigationError(
                     "Claim references an unknown metric result", "claim_metric_invalid"
                 )
+
+    @staticmethod
+    def _relevant_metrics(
+        inputs: InvestigationInputs, signals: Sequence[Signal]
+    ) -> tuple[MetricResult, ...]:
+        test_ids = {
+            test_result_id for signal in signals for test_result_id in signal.source_test_result_ids
+        }
+        metric_ids = {
+            metric_result_id
+            for test in inputs.tests
+            if test.test_result_id in test_ids
+            for metric_result_id in test.metric_result_ids
+        }
+        return tuple(metric for metric in inputs.metrics if metric.metric_result_id in metric_ids)
 
     @staticmethod
     def _validate_verifications(
