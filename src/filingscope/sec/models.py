@@ -4,7 +4,7 @@ from datetime import date
 from decimal import Decimal
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class SecPayloadModel(BaseModel):
@@ -17,6 +17,14 @@ class RecentFilings(SecPayloadModel):
     reportDate: list[date | None]
     form: list[str]
     primaryDocument: list[str]
+
+    @field_validator("reportDate", mode="before")
+    @classmethod
+    def normalize_blank_report_dates(cls, value: Any) -> Any:
+        """SEC uses an empty string when a filing has no report period."""
+        if isinstance(value, list):
+            return [None if item == "" else item for item in value]
+        return value
 
     @model_validator(mode="after")
     def validate_parallel_arrays(self) -> RecentFilings:

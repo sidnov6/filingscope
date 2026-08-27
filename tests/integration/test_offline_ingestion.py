@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from collections.abc import Callable
 from pathlib import Path
 
@@ -44,3 +45,27 @@ def test_fixture_ingestion_is_offline_idempotent_and_queryable(
     assert store.counts() == {"companies": 1, "filings": 4, "raw_xbrl_facts": 6}
     assert {path: path.stat().st_mtime_ns for path in parquet_files} == mtimes
     assert len(list((tmp_path / "raw/sec/manifests").glob("*.json"))) == 2
+
+
+@pytest.mark.integration
+def test_blank_sec_report_date_is_preserved_as_missing(
+    tmp_path: Path,
+    fixture_dir: Path,
+    client_factory: Callable[[httpx.MockTransport], SecHttpClient],
+) -> None:
+    submissions = json.loads((fixture_dir / "aapl_submissions_excerpt.json").read_text())
+    submissions["filings"]["recent"]["reportDate"][0] = ""
+    companyfacts = (fixture_dir / "aapl_companyfacts_excerpt.json").read_bytes()
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        content = companyfacts
+        if "submissions" in request.url.path:
+            content = json.dumps(submissions).encode()
+        return httpx.Response(200, content=content, headers={"content-type": "application/json"})
+
+    store = ParquetDuckDbStore(tmp_path)
+    result = SecIngestionService(
+        client_factory(httpx.MockTransport(handler)), store
+    ).ingest_company("320193")
+
+    assert result.filings[0].report_period is None
