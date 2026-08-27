@@ -10,8 +10,8 @@ from typing import Annotated, Literal
 import httpx
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import PlainTextResponse
-from fastapi.sse import EventSourceResponse
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from fastapi.sse import EventSourceResponse, format_sse_event
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from filingscope import __version__
 from filingscope.config import Settings
@@ -536,15 +536,25 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @application.get(
         "/investigations/stream",
-        response_class=EventSourceResponse,
+        response_model=None,
         tags=["investigations"],
     )
     async def stream_investigation(
         cik: str,
         start_date: date,
         end_date: date,
-    ) -> AsyncIterator[InvestigationEvent | dict[str, object]]:
-        request = InvestigationRequest(cik=cik, start_date=start_date, end_date=end_date)
+    ) -> EventSourceResponse:
+        try:
+            request = InvestigationRequest(cik=cik, start_date=start_date, end_date=end_date)
+        except ValidationError as error:
+            raise HTTPException(
+                status_code=422,
+                detail=error.errors(
+                    include_url=False,
+                    include_context=False,
+                    include_input=False,
+                ),
+            ) from error
         build_inputs(request)
         loop = asyncio.get_running_loop()
         queue: asyncio.Queue[InvestigationEvent | Exception | None] = asyncio.Queue()
@@ -561,24 +571,32 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             finally:
                 loop.call_soon_threadsafe(queue.put_nowait, None)
 
-        task = asyncio.create_task(asyncio.to_thread(worker))
-        while True:
-            item = await queue.get()
-            if item is None:
-                break
-            if isinstance(item, Exception):
-                yield {
-                    "sequence": 1,
-                    "run_id": "unavailable",
-                    "role": "system",
-                    "status": "failed",
-                    "title": "Investigation failed safely",
-                    "message": "The run stopped before a valid report was produced.",
-                    "emitted_at": "unavailable",
-                }
-                continue
-            yield item
-        await task
+        async def event_stream() -> AsyncIterator[bytes]:
+            task = asyncio.create_task(asyncio.to_thread(worker))
+            while True:
+                item = await queue.get()
+                if item is None:
+                    break
+                if isinstance(item, Exception):
+                    yield format_sse_event(
+                        data_str=json.dumps(
+                            {
+                                "sequence": 1,
+                                "run_id": "unavailable",
+                                "role": "system",
+                                "status": "failed",
+                                "title": "Investigation failed safely",
+                                "message": "The run stopped before a valid report was produced.",
+                                "emitted_at": "unavailable",
+                            },
+                            separators=(",", ":"),
+                        )
+                    )
+                    continue
+                yield format_sse_event(data_str=item.model_dump_json())
+            await task
+
+        return EventSourceResponse(event_stream())
 
     @application.get(
         "/investigations/{run_id}",

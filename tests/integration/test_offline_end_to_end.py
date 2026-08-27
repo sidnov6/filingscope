@@ -119,6 +119,15 @@ def test_raw_fixture_to_api_and_deterministic_report(
     assert signals.status_code == 200
     assert signals.json()["metric_count"] == 10
     assert len(signals.json()["tests"]) == 32
+    invalid_stream = api.get(
+        "/investigations/stream",
+        params={
+            "cik": ingestion.company.cik,
+            "start_date": "2020-01-01",
+            "end_date": "2026-06-27",
+        },
+    )
+    assert invalid_stream.status_code == 422
     evidence = api.get(f"/evidence/{packets[0].evidence_id}")
     assert evidence.status_code == 200
 

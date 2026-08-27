@@ -33,7 +33,7 @@ from filingscope.schemas import (
     VerificationStatus,
 )
 
-PROMPT_VERSION = "1.1.0"
+PROMPT_VERSION = "1.2.0"
 ModelT = TypeVar("ModelT", bound=BaseModel)
 AgentRole = Literal["planner", "investigator", "bull", "skeptical", "verifier", "judge"]
 EventRole = Literal["system", "planner", "investigator", "bull", "skeptical", "verifier", "judge"]
