@@ -1,0 +1,75 @@
+[build-system]
+requires = ["hatchling==1.28.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "filingscope"
+version = "0.1.0"
+description = "Deterministic SEC financial-intelligence data foundation"
+readme = "README.md"
+requires-python = ">=3.12,<3.14"
+license = { text = "Proprietary" }
+dependencies = [
+  "duckdb==1.5.5",
+  "fastapi==0.141.1",
+  "httpx==0.28.1",
+  "pyarrow==25.0.1",
+  "pydantic==2.13.4",
+  "pydantic-settings==2.15.0",
+  "structlog==26.1.0",
+  "uvicorn[standard]==0.52.4",
+]
+
+[project.scripts]
+filingscope-offline-ingest = "filingscope.offline_ingest:main"
+filingscope-offline-normalize = "filingscope.offline_normalize:main"
+filingscope-offline-run = "filingscope.offline_run:main"
+
+[project.optional-dependencies]
+dev = [
+  "mypy==2.3.1",
+  "pytest==9.1.1",
+  "pytest-cov==7.1.0",
+  "ruff==0.16.4",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/filingscope"]
+
+[tool.pytest.ini_options]
+addopts = "--strict-config --strict-markers -q"
+testpaths = ["tests"]
+pythonpath = [".", "src"]
+markers = [
+  "integration: offline integration tests spanning multiple components",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.mypy]
+python_version = "3.12"
+mypy_path = "src"
+strict = true
+packages = ["filingscope", "app"]
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["pyarrow", "pyarrow.*"]
+ignore_missing_imports = true
+
+
+[tool.coverage.run]
+source = ["app", "filingscope"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true

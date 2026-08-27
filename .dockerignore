@@ -1,0 +1,13 @@
+.git
+.env
+.venv
+data
+htmlcov
+**/__pycache__
+**/*.pyc
+**/.DS_Store
+ui/.next
+ui/node_modules
+ui/coverage
+ui/playwright-report
+ui/test-results

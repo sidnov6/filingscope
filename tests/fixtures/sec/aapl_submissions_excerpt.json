@@ -1,0 +1,44 @@
+{
+  "cik": "0000320193",
+  "entityType": "operating",
+  "name": "Apple Inc.",
+  "tickers": ["AAPL"],
+  "exchanges": ["Nasdaq"],
+  "stateOfIncorporation": "CA",
+  "addresses": {
+    "business": {
+      "street1": "ONE APPLE PARK WAY",
+      "street2": null,
+      "city": "CUPERTINO",
+      "stateOrCountry": "CA",
+      "zipCode": "95014"
+    },
+    "mailing": {
+      "street1": "ONE APPLE PARK WAY",
+      "street2": null,
+      "city": "CUPERTINO",
+      "stateOrCountry": "CA",
+      "zipCode": "95014"
+    }
+  },
+  "sic": "3571",
+  "filings": {
+    "recent": {
+      "accessionNumber": [
+        "0000320193-26-000020",
+        "0000320193-26-000018",
+        "0000320193-26-000013",
+        "0000320193-26-000011"
+      ],
+      "filingDate": ["2026-07-31", "2026-07-30", "2026-05-01", "2026-04-30"],
+      "reportDate": ["2026-06-27", "2026-07-30", "2026-03-28", "2026-04-30"],
+      "form": ["10-Q", "8-K", "10-Q", "8-K"],
+      "primaryDocument": [
+        "aapl-20260627.htm",
+        "aapl-20260730.htm",
+        "aapl-20260328.htm",
+        "aapl-20260430.htm"
+      ]
+    }
+  }
+}

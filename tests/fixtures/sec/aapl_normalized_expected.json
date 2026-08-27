@@ -1,0 +1,62 @@
+[
+  {
+    "canonical_metric": "assets",
+    "value": "371082000000",
+    "unit": "USD",
+    "start_date": null,
+    "end_date": "2026-03-28",
+    "reporting_basis": "instant",
+    "form": "10-Q",
+    "accession_number": "0000320193-26-000013"
+  },
+  {
+    "canonical_metric": "assets",
+    "value": "383266000000",
+    "unit": "USD",
+    "start_date": null,
+    "end_date": "2026-06-27",
+    "reporting_basis": "instant",
+    "form": "10-Q",
+    "accession_number": "0000320193-26-000020"
+  },
+  {
+    "canonical_metric": "net_income",
+    "value": "101464000000",
+    "unit": "USD",
+    "start_date": "2025-09-28",
+    "end_date": "2026-06-27",
+    "reporting_basis": "year_to_date",
+    "form": "10-Q",
+    "accession_number": "0000320193-26-000020"
+  },
+  {
+    "canonical_metric": "net_income",
+    "value": "29789000000",
+    "unit": "USD",
+    "start_date": "2026-03-29",
+    "end_date": "2026-06-27",
+    "reporting_basis": "quarterly",
+    "form": "10-Q",
+    "accession_number": "0000320193-26-000020"
+  },
+  {
+    "canonical_metric": "revenue",
+    "value": "265595000000",
+    "unit": "USD",
+    "start_date": "2017-10-01",
+    "end_date": "2018-09-29",
+    "reporting_basis": "annual",
+    "form": "10-K",
+    "accession_number": "0000320193-18-000145"
+  },
+  {
+    "canonical_metric": "revenue",
+    "value": "62900000000",
+    "unit": "USD",
+    "start_date": "2018-07-01",
+    "end_date": "2018-09-29",
+    "reporting_basis": "quarterly",
+    "form": "10-K",
+    "accession_number": "0000320193-18-000145"
+  }
+]
