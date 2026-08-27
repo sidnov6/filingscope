@@ -50,7 +50,7 @@ export const recordedFixture: WorkspaceData = {
 };
 
 type ApiFinancials = { company: { legal_name: string; cik: string; tickers: string[] }; facts: Array<{ normalized_fact_id: string; canonical_metric: string; value: string; unit: string; period: { end_date: string; reporting_basis: PeriodBasis }; accession_number: string; original_taxonomy: string; original_concept: string; data_confidence: string; mapping_version: string }>; filings: Array<{ accession_number: string; form: string; filing_date: string; report_period?: string }>; findings: Array<{ category: string }> };
-type ApiSignals = { metrics: unknown[]; tests: Array<{ status: string }>; signals: Array<{ signal_id: string; test_id: string; category: string; severity: "low" | "moderate" | "high" | "critical"; score: string; score_explanation: string }> };
+type ApiSignals = { metric_count: number; tests: Array<{ status: string }>; signals: Array<{ signal_id: string; test_id: string; category: string; severity: "low" | "moderate" | "high" | "critical"; score: string; score_explanation: string }> };
 
 export async function fetchWorkspace(cik: string): Promise<WorkspaceData> {
   const [financialResponse, signalResponse, evidenceResponse, geographyResponse] = await Promise.all([
@@ -71,7 +71,7 @@ export async function fetchWorkspace(cik: string): Promise<WorkspaceData> {
     facts: financials.facts.map((fact) => ({ id: fact.normalized_fact_id, metric: fact.canonical_metric.replaceAll("_", " "), value: Number(fact.value), unit: fact.unit, endDate: fact.period.end_date, basis: fact.period.reporting_basis, accession: fact.accession_number, concept: `${fact.original_taxonomy}:${fact.original_concept}`, confidence: Number(fact.data_confidence) })),
     filings: financials.filings.map((filing) => ({ accession: filing.accession_number, form: filing.form, filingDate: filing.filing_date, reportPeriod: filing.report_period })),
     quality: { findings: financials.findings.length, missingMetrics: financials.findings.filter((finding) => finding.category === "missing_metric").length, mappingVersion: financials.facts[0]?.mapping_version ?? "1.0.0" },
-    analytics: { metricResults: analytics.metrics.length, forensicTests: analytics.tests.length, computableTests: analytics.tests.filter((test) => test.status === "computed").length },
+    analytics: { metricResults: analytics.metric_count, forensicTests: analytics.tests.length, computableTests: analytics.tests.filter((test) => test.status === "computed").length },
     signals: analytics.signals.map((signal) => ({ id: signal.signal_id, test: signal.test_id, category: signal.category, severity: signal.severity, score: Number(signal.score), reason: signal.score_explanation })),
     evidence: evidencePayload.evidence.length ? evidencePayload.evidence.map((item) => ({ id: item.evidence_id, section: item.section, accession: item.source.accession_number ?? "—", excerpt: item.excerpt, sourceUrl: item.source.source_url })) : fallbackEvidence,
     geography: { locations: geographyPayload.locations.map((location) => ({ id: location.geographic_evidence_id, label: location.label, latitude: location.latitude, longitude: location.longitude, address: location.address, precision: location.precision, sourceUrl: location.source_url, sourceHash: location.source_sha256, limitation: location.limitation })), notice: geographyPayload.notice },

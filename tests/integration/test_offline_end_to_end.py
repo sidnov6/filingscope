@@ -114,6 +114,7 @@ def test_raw_fixture_to_api_and_deterministic_report(
     assert len(financials.json()["facts"]) == 5
     signals = api.get(f"/companies/{ingestion.company.cik}/signals")
     assert signals.status_code == 200
+    assert signals.json()["metric_count"] == 10
     assert len(signals.json()["tests"]) == 32
     evidence = api.get(f"/evidence/{packets[0].evidence_id}")
     assert evidence.status_code == 200

@@ -38,7 +38,6 @@ from filingscope.schemas import (
     GeographicEvidence,
     InvestigationEvent,
     InvestigationReport,
-    MetricResult,
     NormalizedFinancialFact,
     PeriodBasis,
     Signal,
@@ -119,7 +118,7 @@ class CacheStatsResponse(ApiModel):
 
 class SignalsResponse(ApiModel):
     company: CompanyIdentity
-    metrics: tuple[MetricResult, ...]
+    metric_count: int
     tests: tuple[ForensicTestResult, ...]
     signals: tuple[Signal, ...]
 
@@ -375,9 +374,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         company = store.company(normalized)
         if company is None:
             raise HTTPException(status_code=404, detail="Company is not available locally")
+        metrics = store.metric_results(normalized)
         return SignalsResponse(
             company=company,
-            metrics=tuple(store.metric_results(normalized)),
+            metric_count=len(metrics),
             tests=tuple(store.test_results(normalized)),
             signals=tuple(store.signals(normalized)),
         )
