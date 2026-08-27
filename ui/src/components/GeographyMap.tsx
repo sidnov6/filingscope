@@ -1,10 +1,44 @@
 "use client";
 
 import * as maplibregl from "maplibre-gl";
-import type { Map as MapLibreMap, Marker } from "maplibre-gl";
+import type { Map as MapLibreMap, Marker, StyleSpecification } from "maplibre-gl";
 import { useEffect, useRef, useState } from "react";
+import { feature } from "topojson-client";
+import type { Topology } from "topojson-specification";
+import countriesTopology from "world-atlas/countries-110m.json";
 import { StatusPanel } from "./StatusPanel";
 import { useWorkspace } from "./WorkspaceProvider";
+
+const worldTopology = countriesTopology as unknown as Topology;
+const countries = feature(worldTopology, worldTopology.objects.countries);
+const LOCAL_WORLD_STYLE: StyleSpecification = {
+  version: 8,
+  sources: {
+    countries: {
+      type: "geojson",
+      data: countries,
+    },
+  },
+  layers: [
+    {
+      id: "ocean",
+      type: "background",
+      paint: { "background-color": "#dcecf1" },
+    },
+    {
+      id: "land",
+      type: "fill",
+      source: "countries",
+      paint: { "fill-color": "#f3efe4", "fill-opacity": 1 },
+    },
+    {
+      id: "country-borders",
+      type: "line",
+      source: "countries",
+      paint: { "line-color": "#8ba2aa", "line-opacity": 0.7, "line-width": 0.7 },
+    },
+  ],
+};
 
 export function GeographyMap() {
   const { data } = useWorkspace();
@@ -16,7 +50,7 @@ export function GeographyMap() {
 
   useEffect(() => {
     if (!container.current || map.current) return;
-    const instance = new maplibregl.Map({ container: container.current, style: "https://demotiles.maplibre.org/style.json", center: [-20, 22], zoom: 1.1, attributionControl: false });
+    const instance = new maplibregl.Map({ container: container.current, style: LOCAL_WORLD_STYLE, center: [-20, 22], zoom: 1.1, attributionControl: false });
     instance.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "top-right");
     instance.addControl(new maplibregl.FullscreenControl(), "top-right");
     instance.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-right");

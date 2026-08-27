@@ -33,7 +33,7 @@ from filingscope.schemas import (
     VerificationStatus,
 )
 
-PROMPT_VERSION = "1.2.0"
+PROMPT_VERSION = "1.3.0"
 ModelT = TypeVar("ModelT", bound=BaseModel)
 AgentRole = Literal["planner", "investigator", "bull", "skeptical", "verifier", "judge"]
 EventRole = Literal["system", "planner", "investigator", "bull", "skeptical", "verifier", "judge"]
@@ -375,11 +375,19 @@ class InvestigationWorkflow:
         plan: BaseModel,
     ) -> dict[str, object]:
         metrics = InvestigationWorkflow._relevant_metrics(inputs, signals)
+        fact_ids = sorted({fact_id for metric in metrics for fact_id in metric.input_fact_ids})
         return {
             "company": inputs.company.model_dump(mode="json"),
             "plan": plan.model_dump(mode="json"),
             "signals": [signal.model_dump(mode="json") for signal in signals],
             "metrics": [metric.model_dump(mode="json") for metric in metrics],
+            "reference_policy": {
+                "allowed_signal_ids": [signal.signal_id for signal in signals],
+                "allowed_evidence_ids": [packet.evidence_id for packet in evidence],
+                "allowed_fact_ids": fact_ids,
+                "allowed_metric_result_ids": [metric.metric_result_id for metric in metrics],
+                "rule": "Copy IDs only into the matching field; use [] when none apply.",
+            },
             "evidence": [
                 {
                     "evidence_id": packet.evidence_id,
